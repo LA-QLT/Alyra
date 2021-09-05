@@ -91,7 +91,7 @@ contract Voting is Ownable{
  * 
  ***********************************************************************************************************/ 
  
-    function EndSessionEnrigrement () public onlyOwner{
+    function EndSessionEnregistrement () public onlyOwner{
        emit ProposalsRegistrationEnded();
        Status = WorkflowStatus.ProposalsRegistrationEnded;
        emit WorkflowStatusChange(WorkflowStatus.ProposalsRegistrationStarted,WorkflowStatus.ProposalsRegistrationEnded);
@@ -157,7 +157,6 @@ contract Voting is Ownable{
        
        
     }
-    
 /*********************************************************************************************************
  * @dev
  * Autre fonctions
