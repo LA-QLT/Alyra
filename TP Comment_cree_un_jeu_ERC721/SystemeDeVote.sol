@@ -36,20 +36,117 @@ contract Voting is Ownable{
     }
     
     mapping (address => Voter) public electeur;
-    mapping (uint => Proposal) public proposition; // Ou sinon methode avec un tableau de type Proposal
-    uint public id; //Nombre de proposition 
-    uint public winningProposalId=2;
+    Proposal [] public proposition;
+    uint public winningProposalId=0;
      
     
-    
-    /*
-    * @title electeur
-    * L’administrateur est le seul qui a le droit d’autoriser un compte
-    */
+/*********************************************************************************************************
+ * L'administrateur du vote enregistre une liste blanche d'électeurs identifiés par leur adresse Ethereum.
+ * 
+ ***********************************************************************************************************/
+ 
  
    function whitelist(address  _address) public onlyOwner{
+       require(!electeur[_address].isRegistered, "This address is already isRegistered !");
        electeur[_address].isRegistered=true;
+       emit VoterRegistered(_address);
    }
+   
+   
+/*********************************************************************************************************
+ *          L'administrateur du vote commence la session d'enregistrement de la proposition.
+ * 
+ ***********************************************************************************************************/
+   
+    function StartSessionEnrigrement () public onlyOwner{
+        emit ProposalsRegistrationStarted();
+    }
+    
+/*********************************************************************************************************
+ *          Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que 
+ *                              la session d'enregistrement est active.
+ * 
+ ***********************************************************************************************************/
+    
+    function Addproposal (string memory  _information) public{
+        require(electeur[msg.sender].isRegistered==true,"Ne figure pas dans la whitelist");
+        Proposal memory newPropo = Proposal(_information, 0); 
+        proposition.push(newPropo);
+        
+    }
+    
+/*********************************************************************************************************
+ *          L'administrateur de vote met fin à la session d'enregistrement des propositions.
+ * 
+ ***********************************************************************************************************/ 
+ 
+    function EndSessionEnrigrement () public onlyOwner{
+       emit ProposalsRegistrationEnded();
+    }
+    
+/*********************************************************************************************************
+ *          L'administrateur du vote commence la session de vote.
+ * 
+ ***********************************************************************************************************/ 
+ 
+    function StartSessionVote () public onlyOwner{
+       emit VotingSessionStarted();
+    }
+    
+/*********************************************************************************************************
+ *         Les électeurs inscrits votent pour leurs propositions préférées.
+ * 
+ ***********************************************************************************************************/ 
+ 
+    function Vote (uint idPropal) public {
+        require(!electeur[msg.sender].hasVoted,"vous avez deja vote");
+        proposition[idPropal].voteCount ++;
+        electeur[msg.sender].hasVoted=true;
+        electeur[msg.sender].votedProposalId=idPropal;
+       
+    }
+    
+/*********************************************************************************************************
+ *         L'administrateur du vote met fin à la session de vote.
+ ***********************************************************************************************************/    
+   
+    function EndSessionVote () public onlyOwner{
+       emit VotingSessionEnded();
+    }
+   
+/*********************************************************************************************************
+ *         L'administrateur du vote comptabilise les votes.
+ *******************************************************************************************************/
+ 
+ 
+    function Comptabilise () external  {
+       uint max =0;
+       for(uint i; i<proposition.length;i++){
+           if (proposition[i].voteCount >max){
+               max =proposition[i].voteCount;
+               winningProposalId=i;
+           }
+       }
+    }
+    
+/*********************************************************************************************************
+ *         Tout le monde peut vérifier les derniers détails de la proposition gagnante.
+ *******************************************************************************************************/    
+    
+    function CheckNbVote (uint id) public view returns(uint){
+      return proposition[id].voteCount;  
+    }
+    function CheckId (uint id) public pure returns(uint){
+      return id;  
+    }
+    function CheckInformation (uint id) public view returns(string memory){
+      return proposition[id].description;  
+    }
+    
+    
+/*********************************************************************************************************
+ *         Tout le monde peut vérifier les derniers détails de la proposition gagnante.
+ *******************************************************************************************************/        
    
    function isWhitelisted(address  _address) public view returns (bool){
        if(electeur[_address].isRegistered==true){
@@ -57,67 +154,5 @@ contract Voting is Ownable{
        }
        return false;
    }
-   
-   
-    function StartSessionEnrigrement () public onlyOwner{
-        
-        
-    }
-    
-    
-    function Addproposal (string memory _information)public  returns(uint){
-        id +=1;
-        proposition[id]=Proposal(_information,0);
-        
-    }
-    
-    function Returnproposal (uint num)public view returns(string memory){
-        return proposition[num].description;
-        
-    }
-    
-    function EndSessionEnrigrement () public onlyOwner{
-       
-    }
-    
-    
-    function StartSessionVote () public onlyOwner{
-       
-    }
-    
-    function Vote (uint idPropal) public {
-        proposition[idPropal].voteCount ++;
-       
-    }
-    function Returnnbvote (uint idPropal)public view returns(uint){
-        return proposition[idPropal].voteCount;
-        
-    }
-    function EndSessionVote () public onlyOwner{
-       
-    }
-    
-    function Comptabilise () public returns(uint){
-       uint max=0;
-       for (uint i; i<id;i++){
-           if(proposition[i].voteCount > max){
-               max = proposition[i].voteCount;
-               winningProposalId = i;
-           }
-       }
-       return winningProposalId;
-       
-    }
-    
-    function Check () public view returns(uint){
-      return proposition[winningProposalId].voteCount;  
-    }
-    
-     function winningProposal () public view returns(uint){
-      return winningProposalId;  
-    }
-    
-    
-    
     
 }
