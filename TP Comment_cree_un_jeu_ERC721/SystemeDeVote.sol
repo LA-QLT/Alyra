@@ -1,6 +1,7 @@
 // Crowdsale.sol
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.11;
+pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.4/contracts/access/Ownable.sol";
 
 contract Voting is Ownable{
@@ -35,12 +36,15 @@ contract Voting is Ownable{
         VotesTallied
     }
     
-    mapping (address => Voter) public electeur;
+    mapping (address => Voter) private electeur;
     Proposal [] public proposition;
     uint public winningProposalId=0;
-     
     
+    WorkflowStatus public Status = WorkflowStatus.VotingSessionEnded;
+
+     
 /*********************************************************************************************************
+ * @dev whitelist
  * L'administrateur du vote enregistre une liste blanche d'électeurs identifiés par leur adresse Ethereum.
  * 
  ***********************************************************************************************************/
@@ -50,25 +54,31 @@ contract Voting is Ownable{
        require(!electeur[_address].isRegistered, "This address is already isRegistered !");
        electeur[_address].isRegistered=true;
        emit VoterRegistered(_address);
+       
    }
    
    
 /*********************************************************************************************************
- *          L'administrateur du vote commence la session d'enregistrement de la proposition.
+ * @dev StartSessionEnrigrement
+ * L'administrateur du vote commence la session d'enregistrement de la proposition.
  * 
  ***********************************************************************************************************/
    
     function StartSessionEnrigrement () public onlyOwner{
         emit ProposalsRegistrationStarted();
+        Status = WorkflowStatus.ProposalsRegistrationStarted;
+        emit WorkflowStatusChange(WorkflowStatus.VotingSessionEnded,WorkflowStatus.ProposalsRegistrationStarted);
     }
     
 /*********************************************************************************************************
- *          Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que 
- *                              la session d'enregistrement est active.
+ * @dev Addproposal         
+ * Les électeurs inscrits sont autorisés à enregistrer leurs propositions pendant que 
+ *                          la session d'enregistrement est active.
  * 
  ***********************************************************************************************************/
     
     function Addproposal (string memory  _information) public{
+        require(Status == WorkflowStatus.ProposalsRegistrationStarted,"La session de proposition n'est pas Ouvert");
         require(electeur[msg.sender].isRegistered==true,"Ne figure pas dans la whitelist");
         Proposal memory newPropo = Proposal(_information, 0); 
         proposition.push(newPropo);
@@ -76,46 +86,60 @@ contract Voting is Ownable{
     }
     
 /*********************************************************************************************************
- *          L'administrateur de vote met fin à la session d'enregistrement des propositions.
+ * @dev EndSessionEnrigrement
+ * L'administrateur de vote met fin à la session d'enregistrement des propositions.
  * 
  ***********************************************************************************************************/ 
  
     function EndSessionEnrigrement () public onlyOwner{
        emit ProposalsRegistrationEnded();
+       Status = WorkflowStatus.ProposalsRegistrationEnded;
+       emit WorkflowStatusChange(WorkflowStatus.ProposalsRegistrationStarted,WorkflowStatus.ProposalsRegistrationEnded);
     }
     
 /*********************************************************************************************************
- *          L'administrateur du vote commence la session de vote.
+ * @dev StartSessionVote
+ * L'administrateur du vote commence la session de vote.
  * 
  ***********************************************************************************************************/ 
  
     function StartSessionVote () public onlyOwner{
        emit VotingSessionStarted();
+       Status = WorkflowStatus.VotingSessionStarted;
+       emit WorkflowStatusChange(WorkflowStatus.ProposalsRegistrationEnded,WorkflowStatus.VotingSessionStarted);
     }
     
 /*********************************************************************************************************
- *         Les électeurs inscrits votent pour leurs propositions préférées.
+ * @dev Vote
+ * Les électeurs inscrits votent pour leurs propositions préférées.
  * 
  ***********************************************************************************************************/ 
  
     function Vote (uint idPropal) public {
+        require(Status == WorkflowStatus.VotingSessionStarted,"La session de Vote n'est pas Ouvert");
+        require(electeur[msg.sender].isRegistered==true,"Ne figure pas dans la whitelist");
         require(!electeur[msg.sender].hasVoted,"vous avez deja vote");
         proposition[idPropal].voteCount ++;
         electeur[msg.sender].hasVoted=true;
         electeur[msg.sender].votedProposalId=idPropal;
+        emit Voted(msg.sender,idPropal);
        
     }
     
 /*********************************************************************************************************
- *         L'administrateur du vote met fin à la session de vote.
+ * @dev EndSessionVote
+ * L'administrateur du vote met fin à la session de vote.
  ***********************************************************************************************************/    
    
     function EndSessionVote () public onlyOwner{
        emit VotingSessionEnded();
+       Status = WorkflowStatus.VotingSessionEnded;
+       emit WorkflowStatusChange(WorkflowStatus.VotingSessionStarted,WorkflowStatus.VotingSessionEnded);
     }
    
 /*********************************************************************************************************
- *         L'administrateur du vote comptabilise les votes.
+ * @dev Comptabilise
+ * L'administrateur du vote comptabilise les votes.
  *******************************************************************************************************/
  
  
@@ -127,26 +151,23 @@ contract Voting is Ownable{
                winningProposalId=i;
            }
        }
+       emit VotesTallied();
+       Status = WorkflowStatus.VotesTallied;
+       emit WorkflowStatusChange(WorkflowStatus.VotingSessionEnded,WorkflowStatus.VotesTallied);
+       
+       
     }
     
 /*********************************************************************************************************
- *         Tout le monde peut vérifier les derniers détails de la proposition gagnante.
+ * @dev
+ * Autre fonctions
  *******************************************************************************************************/    
     
-    function CheckNbVote () public view returns(uint){
-      return proposition[winningProposalId].voteCount;  
-    }
-    function CheckId () public view returns(uint){
-      return winningProposalId;  
-    }
-    function CheckInformation () public view returns(string memory){
-      return proposition[winningProposalId].description;  
+    function CheckWinner () public view returns(Proposal memory){
+      return proposition[winningProposalId];  
     }
     
     
-/*********************************************************************************************************
- *         Tout le monde peut vérifier les derniers détails de la proposition gagnante.
- *******************************************************************************************************/        
    
    function isWhitelisted(address  _address) public view returns (bool){
        if(electeur[_address].isRegistered==true){
