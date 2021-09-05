@@ -119,7 +119,7 @@ contract Voting is Ownable{
  *******************************************************************************************************/
  
  
-    function Comptabilise () external  {
+    function Comptabilise () external  onlyOwner{
        uint max =0;
        for(uint i; i<proposition.length;i++){
            if (proposition[i].voteCount >max){
@@ -133,14 +133,14 @@ contract Voting is Ownable{
  *         Tout le monde peut vérifier les derniers détails de la proposition gagnante.
  *******************************************************************************************************/    
     
-    function CheckNbVote (uint id) public view returns(uint){
-      return proposition[id].voteCount;  
+    function CheckNbVote () public view returns(uint){
+      return proposition[winningProposalId].voteCount;  
     }
-    function CheckId (uint id) public pure returns(uint){
-      return id;  
+    function CheckId () public view returns(uint){
+      return winningProposalId;  
     }
-    function CheckInformation (uint id) public view returns(string memory){
-      return proposition[id].description;  
+    function CheckInformation () public view returns(string memory){
+      return proposition[winningProposalId].description;  
     }
     
     
