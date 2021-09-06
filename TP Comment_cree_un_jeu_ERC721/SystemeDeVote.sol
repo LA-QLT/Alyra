@@ -143,7 +143,7 @@ contract Voting is Ownable{
  *******************************************************************************************************/
  
  
-    function Comptabilise () external  onlyOwner{
+    function Comptabilise () public  onlyOwner{
        uint max =0;
        for(uint i; i<proposition.length;i++){
            if (proposition[i].voteCount >max){
