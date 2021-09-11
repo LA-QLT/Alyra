@@ -24,6 +24,7 @@ contract Crowdsale {
    function() public {         //fallback doit etre external et payable et dans la 0.8 on utilise receive 
        balances[msg.sender] = balances[msg.sender].add(msg.value);
        savedBalance = savedBalance.add(msg.value);
+       //Probleme le contract envoyer directement les fonds investit vers une autre adresse
        escrow.send(msg.value);//Eviter le .send car n'envoie pas d'exception en cas d'erreur
    }
   
@@ -32,6 +33,7 @@ contract Crowdsale {
        address payee = msg.sender;//Optimisation de cote
        uint256 payment = balances[payee];//Optimisation de code 
         //require : verifier que la balance ne soit pas egal a 0;
+        //Attention les ethers ne sont pas stocke dans le contrat mais dans l'adresse escrow
        payee.send(payment);//Eviter le .send car n'envoie pas d'exception en cas d'erreur, utilise .transfer
  
        savedBalance = savedBalance.sub(payment);//faire les changement d'etat avant l'envoi du .send car REENTRANCE
